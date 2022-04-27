@@ -10,7 +10,7 @@ import pandas as pd
 
 
 # configurations.
-all_models = ['wmf', 'expomf', 'relmf', 'bpr', 'ubpr']
+all_models = ['wmf', 'expomf', 'relmf', 'bpr', 'ubpr', 'ipwbpr']
 K = [3, 5, 8]
 metrics = ['DCG', 'Recall', 'MAP']
 col_names = [f'{m}@{k}' for m in metrics for k in K]

@@ -14,7 +14,7 @@ from tensorflow.python.framework import ops
 
 from evaluate.evaluator import aoa_evaluator
 from models.expomf import ExpoMF
-from models.recommenders import PairwiseRecommender, PointwiseRecommender
+from models.recommenders import PairwiseRecommender, PointwiseRecommender, IPWPairwiseRecommender
 
 
 def train_expomf(data: str, train: np.ndarray, num_users: int, num_items: int,
@@ -129,7 +129,7 @@ def train_pairwise(sess: tf.Session, model: PairwiseRecommender, data: str,
                                           model.items2: train_batch[:, 2],
                                           model.labels2: np.zeros((batch_size, 1)),
                                           model.scores2: np.ones((batch_size, 1))})
-        elif 'ubpr' in model_name:
+        elif 'ubpr' in model_name or 'ipwbpr' in model_name:
             _, loss = sess.run([model.apply_grads, model.loss],
                                feed_dict={model.users: train_batch[:, 0],
                                           model.pos_items: train_batch[:, 1],
@@ -155,7 +155,7 @@ def train_pairwise(sess: tf.Session, model: PairwiseRecommender, data: str,
                                        model.items2: val[:, 2],
                                        model.labels2: np.zeros((num_val, 1)),
                                        model.scores2: np.ones((num_val, 1))})
-    elif 'ubpr' in model_name:
+    elif 'ubpr' in model_name or 'ipwbpr' in model_name:
         val_loss = sess.run(model.unbiased_loss,
                             feed_dict={model.users: val[:, 0],
                                        model.pos_items: val[:, 1],
@@ -209,7 +209,7 @@ class Trainer:
         pscore = np.load(f'../data/{self.data}/point/pscore.npy')
         num_users = np.int(train_point[:, 0].max() + 1)
         num_items = np.int(train_point[:, 1].max() + 1)
-        if self.model_name in ['bpr', 'ubpr']:
+        if self.model_name in ['bpr', 'ubpr', 'ipwbpr']:
             train = np.load(f'../data/{self.data}/pair/{self.model_name}_train.npy')
             val = np.load(f'../data/{self.data}/pair/{self.model_name}_val.npy')
             test = np.load(f'../data/{self.data}/pair/test.npy')
@@ -225,9 +225,14 @@ class Trainer:
             tf.set_random_seed(12345)
             ops.reset_default_graph()
             sess = tf.Session()
-            if self.model_name in ['ubpr', 'bpr']:
-                pair_rec = PairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
+            if self.model_name in ['ubpr', 'bpr', 'ipwbpr']:
+                if self.model_name != 'ipwbpr':
+                    pair_rec = PairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
                                                lam=self.lam, eta=self.eta, beta=self.beta)
+                else:
+                    pair_rec = IPWPairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
+                                               lam=self.lam, eta=self.eta, beta=self.beta) 
+                                       
                 u_emb, i_emb, _ = train_pairwise(sess, model=pair_rec, data=self.data,
                                                  train=train, val=val, test=test,
                                                  max_iters=self.max_iters, batch_size=self.batch_size,

@@ -86,8 +86,10 @@ def preprocess_dataset(data: str):
     pair_test = _bpr_test(data=test, n_samples=samples)
     np.save(file=path_data / 'pair/bpr_train.npy', arr=bpr_train)
     np.save(file=path_data / 'pair/ubpr_train.npy', arr=ubpr_train)
+    np.save(file=path_data / 'pair/ipwbpr_train.npy', arr=ubpr_train)
     np.save(file=path_data / 'pair/bpr_val.npy', arr=bpr_val)
     np.save(file=path_data / 'pair/ubpr_val.npy', arr=ubpr_val)
+    np.save(file=path_data / 'pair/ipwbpr_val.npy', arr=ubpr_val)
     np.save(file=path_data / 'pair/test.npy', arr=pair_test)
 
 
