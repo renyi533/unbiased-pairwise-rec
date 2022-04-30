@@ -195,7 +195,8 @@ class Trainer:
             self.lam = hyper_params['lam']
             self.weight = hyper_params['weight'] if model_name == 'wmf' else 1.
             self.clip = hyper_params['clip'] if model_name == 'relmf' else 0.
-            self.beta = hyper_params['beta'] if model_name == 'ubpr' else 0.
+            self.beta = hyper_params['beta'] if 'ubpr'in model_name else 0.
+            self.pair_weight = hyper_params['pair_weight'] if 'ipwbpr'in model_name else 0.
         self.batch_size = batch_size
         self.max_iters = max_iters
         self.eta = eta
@@ -209,9 +210,10 @@ class Trainer:
         pscore = np.load(f'../data/{self.data}/point/pscore.npy')
         num_users = np.int(train_point[:, 0].max() + 1)
         num_items = np.int(train_point[:, 1].max() + 1)
-        if self.model_name in ['bpr', 'ubpr', 'ipwbpr']:
-            train = np.load(f'../data/{self.data}/pair/{self.model_name}_train.npy')
-            val = np.load(f'../data/{self.data}/pair/{self.model_name}_val.npy')
+        if 'bpr' in self.model_name:
+            data_name = self.model_name.split('_')[0]
+            train = np.load(f'../data/{self.data}/pair/{data_name}_train.npy')
+            val = np.load(f'../data/{self.data}/pair/{data_name}_val.npy')
             test = np.load(f'../data/{self.data}/pair/test.npy')
         if self.data == 'yahoo':
             user_freq = np.load(f'../data/{self.data}/point/user_freq.npy')
@@ -225,13 +227,13 @@ class Trainer:
             tf.set_random_seed(12345)
             ops.reset_default_graph()
             sess = tf.Session()
-            if self.model_name in ['ubpr', 'bpr', 'ipwbpr']:
-                if self.model_name != 'ipwbpr':
+            if 'bpr' in self.model_name:
+                if 'ipwbpr' not in self.model_name:
                     pair_rec = PairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
                                                lam=self.lam, eta=self.eta, beta=self.beta)
                 else:
                     pair_rec = IPWPairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
-                                               lam=self.lam, eta=self.eta, beta=self.beta) 
+                                               lam=self.lam, eta=self.eta, beta=self.beta, pair_weight=self.pair_weight) 
                                        
                 u_emb, i_emb, _ = train_pairwise(sess, model=pair_rec, data=self.data,
                                                  train=train, val=val, test=test,
@@ -270,3 +272,4 @@ class Trainer:
         if self.data == 'yahoo':
             pd.concat(cold_user_result_list, 1).to_csv(ret_path / f'aoa_cold-user.csv')
             pd.concat(rare_item_result_list, 1).to_csv(ret_path / f'aoa_rare-item.csv')
+
