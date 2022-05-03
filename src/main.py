@@ -11,7 +11,7 @@ import tensorflow as tf
 from trainer import Trainer
 
 parser = argparse.ArgumentParser()
-possible_model_names = ['bpr', 'ubpr', 'wmf', 'expomf', 'relmf', 'ipwbpr', 'ipwbpr_r0', 'ipwbpr_r1', 'ubpr_nclip', 'ubpr_d']
+possible_model_names = ['bpr', 'ubpr', 'wmf', 'expomf', 'relmf', 'upl_bpr', 'ubpr_nclip', 'relmf_du']
 parser.add_argument('--model_name', '-m', type=str, required=True, choices=possible_model_names)
 parser.add_argument('--run_sims', '-r', type=int, default=10, required=True)
 parser.add_argument('--data', '-d', type=str, required=True, choices=['coat', 'yahoo'])

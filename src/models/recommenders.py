@@ -45,6 +45,8 @@ class PointwiseRecommender(AbstractRecommender):
     eta: float
     weight: float = 1.
     clip: float = 0.
+    dual_unbias: bool = False
+    pow: float = 0.5
 
     def __post_init__(self,) -> None:
         """Initialize Class."""
@@ -79,8 +81,13 @@ class PointwiseRecommender(AbstractRecommender):
         with tf.name_scope('losses'):
             # define the unbiased loss for the ideal loss function with binary implicit feedback.
             scores = tf.clip_by_value(self.scores, clip_value_min=self.clip, clip_value_max=1.0)
+            orig_scores = tf.pow(scores, 1.0 / self.pow)
+            dual_scores = tf.pow(1.0 - orig_scores, self.pow) + 1e-6
             local_losses = (self.labels / scores) * tf.square(1. - self.preds)
-            local_losses += self.weight * (1 - self.labels / scores) * tf.square(self.preds)
+            if not self.dual_unbias:
+                local_losses += self.weight * (1 - self.labels / scores) * tf.square(self.preds)
+            else:
+                local_losses += self.weight * ((1 - self.labels) / dual_scores) * tf.square(self.preds)
             local_losses = tf.clip_by_value(local_losses, clip_value_min=-1000, clip_value_max=1000)
             numerator = tf.reduce_sum(self.labels + self.weight * (1 - self.labels))
             self.unbiased_loss = tf.reduce_sum(local_losses) / numerator
@@ -161,7 +168,7 @@ class PairwiseRecommender(AbstractRecommender):
             self.apply_grads = tf.train.AdamOptimizer(learning_rate=self.eta).minimize(self.loss)
 
 @dataclass
-class IPWPairwiseRecommender(PairwiseRecommender):
+class UPLPairwiseRecommender(PairwiseRecommender):
     """Implicit Recommenders based on pairwise approach."""
     pair_weight: int = 0
     norm_weight: bool = False
@@ -223,8 +230,6 @@ class IPWPairwiseRecommender(PairwiseRecommender):
         """Create the losses."""
         with tf.name_scope('losses'):
             # define the naive pairwise loss.
-            print('pair_weight: %d' % (self.pair_weight))
-            print('norm_weight: %d' % (self.norm_weight))
             local_losses = - self.rel1 * (1 - self.rel2) * tf.log(self.preds)
             self.ideal_loss = tf.reduce_sum(local_losses) / tf.reduce_sum(self.rel1 * (1 - self.rel2))
             # define the unbiased pairwise loss.
@@ -234,33 +239,8 @@ class IPWPairwiseRecommender(PairwiseRecommender):
             point_neg_preds = tf.stop_gradient(self.point_preds)
             numerator = (self.scores2 * (1 - point_neg_preds))
             denominator = 1.0 - point_neg_preds * self.scores2 + 1e-5
-            if self.pair_weight != 2:
-                print('compute scores2_minus')
-                self.scores2_minus = numerator / denominator
-            else:
-                print('use scores2 as scores2_minus')
-                self.scores2_minus = self.scores2
-            numerator = (self.scores2_minus * point_pos_preds * (1 - point_neg_preds))
-            #numerator = (self.scores2_minus * tf.stop_gradient(self.preds))
-            #point_pos_preds = tf.Print(point_pos_preds, [point_pos_preds, point_neg_preds, self.preds], 'point_pos_preds')
-            denominator = numerator + (1 - self.scores2_minus) * point_pos_preds
-            #denominator = tf.Print(denominator, [numerator, denominator, numerator/denominator], 'denominator')
-            if self.pair_weight != 1:
-                local_losses *= numerator / denominator
-            else:
-                local_losses *= self.scores2_minus
-            #self.pair_weight = abs(self.pair_weight)
-            # weight = tf.ones_like(point_pos_preds, dtype=tf.float32)            
-            # if self.pair_weight == 2:
-            #     weight *= point_pos_preds
-            # elif self.pair_weight == 3:
-            #     weight *= point_pos_preds * (1 - point_neg_preds)   
-            # 
-            # if self.norm_weight:
-            #     weight = weight / tf.reduce_mean(weight)
-            # #weight = tf.Print(weight, [weight], 'weight')
-            # local_losses *= weight
-            # non-negative
+            self.scores2_minus = numerator / denominator
+            local_losses *= self.scores2_minus
             local_losses = tf.clip_by_value(local_losses, clip_value_min=-self.beta, clip_value_max=10e5)
             self.unbiased_loss = tf.reduce_mean(local_losses)
 

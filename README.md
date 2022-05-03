@@ -7,11 +7,9 @@
 This repository accompanies the real-world experiments conducted in the paper "**Unbiased Pairwise Learning from Biased Implicit Feedback**" by [Yuta Saito](https://usaito.github.io/), which has been accepted by [ICTIR'20](https://ictir2020.org/).
 
 <!-- If you find this code useful in your research then please cite:
-
 ```
 @
 ``` -->
-
 
 ### Dependencies
 
@@ -21,6 +19,8 @@ This repository accompanies the real-world experiments conducted in the paper "*
 - scikit-learn==0.23.1
 - tensorflow==1.15.2
 - pyyaml==5.1.2
+
+### About
 
 ### Datasets
 To run the simulation with real-world datasets, the following datasets need to be prepared as described below.
@@ -41,7 +41,7 @@ Then, run the following command in the same directory
 ```bash
 for data in yahoo coat
   do
-  for model in wmf expomf relmf bpr ubpr ipwbpr
+  for model in wmf relmf bpr ubpr upl_bpr relmf_du ubpr_nclip
   do
     python main.py -m $model -d $data -r 10
   done
@@ -57,8 +57,6 @@ python summarize_results.py -d yahoo coat
 
 Once the code is finished executing, you can find the summarized results in `./paper_results/` directory.
 
-
 ### Acknowledgement
 
 We thank [Minato Sato](https://github.com/satopirka) for his helpful comments, discussions, and advice.
-

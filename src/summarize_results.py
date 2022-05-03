@@ -11,7 +11,7 @@ from statistics import stdev
 
 
 # configurations.
-all_models = ['bpr', 'ubpr', 'wmf', 'expomf', 'relmf', 'ipwbpr', 'ipwbpr_r0', 'ipwbpr_r1', 'ubpr_nclip', 'ubpr_d']
+all_models = ['bpr', 'ubpr', 'wmf', 'expomf', 'relmf', 'upl_bpr', 'ubpr_nclip', 'relmf_du']
 K = [3, 5, 8]
 metrics = ['DCG', 'Recall', 'MAP']
 col_names = [f'{m}@{k}' for m in metrics for k in K]

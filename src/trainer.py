@@ -14,7 +14,7 @@ from tensorflow.python.framework import ops
 
 from evaluate.evaluator import aoa_evaluator
 from models.expomf import ExpoMF
-from models.recommenders import PairwiseRecommender, PointwiseRecommender, IPWPairwiseRecommender
+from models.recommenders import PairwiseRecommender, PointwiseRecommender, UPLPairwiseRecommender
 
 
 def train_expomf(data: str, train: np.ndarray, num_users: int, num_items: int,
@@ -50,7 +50,7 @@ def train_pointwise(sess: tf.Session, model: PointwiseRecommender, data: str,
     init_op = tf.global_variables_initializer()
     sess.run(init_op)
 
-    ips = model_name == 'relmf'
+    ips = 'relmf' in model_name
     # pscore for train
     pscore = pscore[train[:, 1].astype(int)]
     # positive and unlabeled data for training set
@@ -129,7 +129,7 @@ def train_pairwise(sess: tf.Session, model: PairwiseRecommender, data: str,
                                           model.items2: train_batch[:, 2],
                                           model.labels2: np.zeros((batch_size, 1)),
                                           model.scores2: np.ones((batch_size, 1))})
-        elif 'ubpr' in model_name or 'ipwbpr' in model_name:
+        elif 'ubpr' in model_name or 'upl_bpr' in model_name:
             _, loss = sess.run([model.apply_grads, model.loss],
                                feed_dict={model.users: train_batch[:, 0],
                                           model.pos_items: train_batch[:, 1],
@@ -155,7 +155,7 @@ def train_pairwise(sess: tf.Session, model: PairwiseRecommender, data: str,
                                        model.items2: val[:, 2],
                                        model.labels2: np.zeros((num_val, 1)),
                                        model.scores2: np.ones((num_val, 1))})
-    elif 'ubpr' in model_name or 'ipwbpr' in model_name:
+    elif 'ubpr' in model_name or 'upl_bpr' in model_name:
         val_loss = sess.run(model.unbiased_loss,
                             feed_dict={model.users: val[:, 0],
                                        model.pos_items: val[:, 1],
@@ -196,7 +196,8 @@ class Trainer:
             self.weight = hyper_params['weight'] if model_name == 'wmf' else 1.
             self.clip = hyper_params['clip'] if model_name == 'relmf' else 0.
             self.beta = hyper_params['beta'] if 'ubpr'in model_name else 0.
-            self.pair_weight = hyper_params['pair_weight'] if 'ipwbpr'in model_name else 0.
+            self.pair_weight = hyper_params['pair_weight'] if 'upl'in model_name else 0.
+            self.dual_unbias = hyper_params['dual_unbias'] if 'bpr' not in model_name else False
         self.batch_size = batch_size
         self.max_iters = max_iters
         self.eta = eta
@@ -228,20 +229,20 @@ class Trainer:
             ops.reset_default_graph()
             sess = tf.Session()
             if 'bpr' in self.model_name:
-                if 'ipwbpr' not in self.model_name:
+                if 'upl_bpr' not in self.model_name:
                     pair_rec = PairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
                                                lam=self.lam, eta=self.eta, beta=self.beta)
                 else:
-                    pair_rec = IPWPairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
+                    pair_rec = UPLPairwiseRecommender(num_users=num_users, num_items=num_items, dim=self.dim,
                                                lam=self.lam, eta=self.eta, beta=self.beta, pair_weight=self.pair_weight) 
                                        
                 u_emb, i_emb, _ = train_pairwise(sess, model=pair_rec, data=self.data,
                                                  train=train, val=val, test=test,
                                                  max_iters=self.max_iters, batch_size=self.batch_size,
                                                  model_name=self.model_name)
-            elif self.model_name in ['wmf', 'relmf']:
+            elif self.model_name in ['wmf', 'relmf', 'relmf_du']:
                 point_rec = PointwiseRecommender(num_users=num_users, num_items=num_items, weight=self.weight,
-                                                 clip=self.clip, dim=self.dim, lam=self.lam, eta=self.eta)
+                                                 clip=self.clip, dim=self.dim, lam=self.lam, eta=self.eta, dual_unbias=self.dual_unbias)
                 u_emb, i_emb, _ = train_pointwise(sess, model=point_rec, data=self.data,
                                                   train=train_point, val=val_point, test=test_point, pscore=pscore,
                                                   max_iters=self.max_iters, batch_size=self.batch_size,
