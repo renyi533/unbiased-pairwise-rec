@@ -6,6 +6,12 @@ coat:
     clip: 0.002808891158289788
     dim: 300.0
     lam: 1.3828770780317699e-06
+    dual_unbias: False
+  relmf_du:
+    clip: 0.002808891158289788
+    dim: 300.0
+    lam: 1.3828770780317699e-06
+    dual_unbias: True
   ubpr_nclip:
     beta: 100000000.0
     dim: 300.0
@@ -22,6 +28,7 @@ coat:
     dim: 140.0
     lam: 5.177711406094569e-07
     weight: 0.886018545949848
+    dual_unbias: False
   ipwbpr_r0:
     pair_weight: 1
     beta: 0.0
@@ -45,6 +52,12 @@ yahoo:
     clip: 0.01639041939021016
     dim: 160.0
     lam: 1.0586149071898904e-07
+    dual_unbias: False
+  relmf_du:
+    clip: 0.01639041939021016
+    dim: 160.0
+    lam: 1.0586149071898904e-07
+    dual_unbias: True
   ubpr_nclip:
     beta: 100000000.0
     dim: 100.0
@@ -76,3 +89,4 @@ yahoo:
     dim: 120.0
     lam: 1.0116917938768408e-07
     weight: 0.9682271409862864
+    dual_unbias: False

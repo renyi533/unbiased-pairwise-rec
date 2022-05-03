@@ -50,7 +50,7 @@ def train_pointwise(sess: tf.Session, model: PointwiseRecommender, data: str,
     init_op = tf.global_variables_initializer()
     sess.run(init_op)
 
-    ips = model_name == 'relmf'
+    ips = 'relmf' in model_name
     # pscore for train
     pscore = pscore[train[:, 1].astype(int)]
     # positive and unlabeled data for training set
@@ -197,6 +197,7 @@ class Trainer:
             self.clip = hyper_params['clip'] if model_name == 'relmf' else 0.
             self.beta = hyper_params['beta'] if 'ubpr'in model_name else 0.
             self.pair_weight = hyper_params['pair_weight'] if 'ipwbpr'in model_name else 0.
+            self.dual_unbias = hyper_params['dual_unbias'] if 'bpr' not in model_name else False
         self.batch_size = batch_size
         self.max_iters = max_iters
         self.eta = eta
@@ -239,9 +240,9 @@ class Trainer:
                                                  train=train, val=val, test=test,
                                                  max_iters=self.max_iters, batch_size=self.batch_size,
                                                  model_name=self.model_name)
-            elif self.model_name in ['wmf', 'relmf']:
+            elif self.model_name in ['wmf', 'relmf', 'relmf_du']:
                 point_rec = PointwiseRecommender(num_users=num_users, num_items=num_items, weight=self.weight,
-                                                 clip=self.clip, dim=self.dim, lam=self.lam, eta=self.eta)
+                                                 clip=self.clip, dim=self.dim, lam=self.lam, eta=self.eta, dual_unbias=self.dual_unbias)
                 u_emb, i_emb, _ = train_pointwise(sess, model=point_rec, data=self.data,
                                                   train=train_point, val=val_point, test=test_point, pscore=pscore,
                                                   max_iters=self.max_iters, batch_size=self.batch_size,

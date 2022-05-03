@@ -45,6 +45,8 @@ class PointwiseRecommender(AbstractRecommender):
     eta: float
     weight: float = 1.
     clip: float = 0.
+    dual_unbias: bool = False
+    pow: float = 0.5
 
     def __post_init__(self,) -> None:
         """Initialize Class."""
@@ -79,8 +81,13 @@ class PointwiseRecommender(AbstractRecommender):
         with tf.name_scope('losses'):
             # define the unbiased loss for the ideal loss function with binary implicit feedback.
             scores = tf.clip_by_value(self.scores, clip_value_min=self.clip, clip_value_max=1.0)
+            orig_scores = tf.pow(scores, 1.0 / self.pow)
+            dual_scores = tf.pow(1.0 - orig_scores, self.pow) + 1e-6
             local_losses = (self.labels / scores) * tf.square(1. - self.preds)
-            local_losses += self.weight * (1 - self.labels / scores) * tf.square(self.preds)
+            if not self.dual_unbias:
+                local_losses += self.weight * (1 - self.labels / scores) * tf.square(self.preds)
+            else:
+                local_losses += self.weight * ((1 - self.labels) / dual_scores) * tf.square(self.preds)
             local_losses = tf.clip_by_value(local_losses, clip_value_min=-1000, clip_value_max=1000)
             numerator = tf.reduce_sum(self.labels + self.weight * (1 - self.labels))
             self.unbiased_loss = tf.reduce_sum(local_losses) / numerator
